@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            background-color: black;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .box {
+            height: 100px;
+            width: 100px;
+            background-color: red;
+        }
+
+        /* Screen width se */
+        @media (max-width:400px) {
+
+
+            .box {
+
+                background-color: blue;
+            }
+        }
+
+        @media (min-width: 400px) and (max-width: 768px) {
+            .box {
+                background-color: green;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="box">
+
+
+
+
+    </div>
+</body>
+
+</html>
