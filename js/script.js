@@ -80,9 +80,9 @@
 // const numbers = [1, 2, 3, 4, 5]; // array
 
 
-let name = "Piyush Kumar"; // string    
-let notDefined;               // Undefined
-let empty = null;    
+// let name = "Piyush Kumar"; // string    
+// let notDefined;               // Undefined
+// let empty = null;    
 // console.log(notDefined);    // Output: undefined
 // console.log(empty);   
 
@@ -90,7 +90,81 @@ let empty = null;
 // typeof name;    // Output: string
 // typeof notDefined;
 
-console.log( typeof empty); 
-console.log( typeof notDefined);
-console.log( typeof name);
+// console.log( typeof empty); 
+// console.log( typeof notDefined);
+// console.log( typeof name);
 // Output: object
+
+
+// let number1 = 42; // number
+// let number2 = 32; // number
+
+
+// console.log(number1 + number2);   // Output: 74
+
+// console.log(number1 - number2);   // Output: 10
+// console.log(number1 * number2);   // Output: 1344
+// console.log(number1 / number2);   // Output: 1.3125
+// console.log(number1 % number2);   // Output: 10
+
+
+// let x = 10; // number
+
+// x  += 5;  // addition
+// console.log(x); // Output: 15
+
+// x -= 5;  // subtraction
+// console.log(x); // Output: 5
+
+// x *= 2;  // multiplication
+// console.log(x); // Output: 20
+
+// x /= 2;  // division
+// console.log(x); // Output: 5
+
+
+;
+
+
+let x = 10 // number
+// console.log(x == 10); // Output: true 
+// console.log(x === 10); // Output: false
+// console.log(x === "10"); // Output: true
+
+
+// console.log(x == 10); // Output: true
+// console.log(x != 5); // Output: true
+// console.log(x != 10); // Output: false
+
+// console.log(x > 5); // Output: true
+// console.log(x < 5); // Output: false
+// console.log(x !== "10" ); // Output: true
+
+// ==  value comparison
+// === value and type comparison
+
+// console.log(true && false); // false - AND
+// console.log(true || false); // true  - OR
+// console.log(!true);          // false - NOT
+
+
+// let age = 21;
+
+// if(age >= 18){
+//     console.log("You are eligible to vote.");
+// }else{
+//     console.log("You are not eligible to vote.");
+// }
+
+
+// let canVote =  age >=18 ? "You are eligible to vote." : "You are not eligible to vote.";
+
+// if true then "You are eligible to vote." will be assigned to canVote otherwise "You are not eligible to vote." will be assigned to canVote
+
+// console.log(canVote);
+
+
+name  = "Piyush Kumar";
+
+  
+ 
