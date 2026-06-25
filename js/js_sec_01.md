@@ -1659,3 +1659,1170 @@ Global->>Global: Function context popped from Call Stack
 
 ---
 ---
+ # SECTION 7: Scope & Closures
+
+## 1. Introduction
+
+**Scope kya hai?**
+
+Scope decide karta hai ki kisi variable ko code ke kis hisse se access kiya ja sakta hai. JavaScript me scope ke types: Global, Function, Block, Lexical.
+
+**Closure kya hai?**
+
+Closure ek function hai jo apne **outer (lexical) scope ke variables ko yaad rakhta hai**, even after outer function execution complete ho jaaye.
+
+**Why is it needed?**
+- Scope: Variable naming conflicts avoid karta hai, data encapsulation deta hai.
+- Closures: Private variables banana, state persist karna, memoization, module pattern — sab closures ki wajah se possible hai.
+
+**Real-world use case**: Bank account balance ko private rakhna jisse sirf specific functions hi modify kar sakein — closure isko enable karta hai.
+
+---
+
+## 2. Internal Working
+
+```mermaid
+graph TD
+A[Global Scope] --> B[Function Scope]
+B --> C[Block Scope]
+C --> D[Lexical Scope - scope chain based on where function is WRITTEN, not called]
+```
+
+**Lexical Scope**: Function apne surrounding code ke scope ko access kar sakta hai jahan woh **define** hua tha, na ki jahan se woh **call** hua.
+
+**Closure Memory Diagram**:
+
+```mermaid
+graph TD
+A[Outer Function Execution] --> B[Variable x created in Outer scope]
+B --> C[Inner Function Defined - captures reference to x]
+A --> D[Outer Function Returns]
+D --> E[Outer Execution Context normally destroyed]
+E --> F["BUT x survives in memory because Inner Function's closure still references it"]
+C --> F
+```
+
+**Execution Flow**: Jab outer function return ho jaata hai, normally uska execution context garbage collected ho jaata hai. Lekin agar koi inner function (closure) us scope ke variables ko reference kar raha hai, JS engine unhe memory me **alive** rakhta hai jab tak closure exist karta hai.
+
+---
+
+## 3. Syntax
+
+### Scope Types
+```javascript
+// Global Scope
+let globalVar = "I am global";
+
+function outer() {
+  // Function Scope
+  let functionVar = "I am function-scoped";
+  
+  if (true) {
+    // Block Scope
+    let blockVar = "I am block-scoped";
+    console.log(blockVar); // accessible
+  }
+  // console.log(blockVar); // ❌ Error - not accessible here
+}
+```
+
+### Closure Basic Syntax
+```javascript
+function outer() {
+  let count = 0;
+  function inner() {
+    count++;
+    return count;
+  }
+  return inner;
+}
+const increment = outer();
+console.log(increment()); // 1
+console.log(increment()); // 2
+```
+
+### Common Mistakes
+
+| Mistake | Issue |
+|---------|-------|
+| Closures ko loops me galat use karna (`var` ke saath) | Sab closures same final variable reference karte hain |
+| Memory leak risk | Closures unnecessarily large objects ko reference karke memory me hold kar sakte hain |
+| Lexical scope ko dynamic scope samajhna | JS lexical scoping use karta hai — function definition location matter karti hai, call location nahi |
+
+---
+
+## 4. Examples
+
+**Beginner**
+```javascript
+function greet() {
+  let message = "Hello";
+  function sayMessage() {
+    console.log(message); // accessing outer variable
+  }
+  sayMessage();
+}
+greet(); // "Hello"
+```
+
+**Intermediate — Private Variables (Module Pattern)**
+```javascript
+function BankAccount(initialBalance) {
+  let balance = initialBalance; // private, not accessible outside
+
+  return {
+    deposit(amount) {
+      balance += amount;
+      return balance;
+    },
+    withdraw(amount) {
+      if (amount > balance) return "Insufficient funds";
+      balance -= amount;
+      return balance;
+    },
+    getBalance() {
+      return balance;
+    }
+  };
+}
+
+const account = BankAccount(1000);
+console.log(account.deposit(500));  // 1500
+console.log(account.withdraw(200)); // 1300
+console.log(account.balance);        // undefined - truly private!
+```
+
+**Advanced — Memoization using Closures**
+```javascript
+function memoize(fn) {
+  const cache = {};
+  return function(...args) {
+    const key = JSON.stringify(args);
+    if (cache[key]) {
+      console.log("From cache");
+      return cache[key];
+    }
+    const result = fn(...args);
+    cache[key] = result;
+    return result;
+  };
+}
+
+function slowSquare(n) {
+  for (let i = 0; i < 1e6; i++) {} // simulate slow operation
+  return n * n;
+}
+
+const fastSquare = memoize(slowSquare);
+console.log(fastSquare(5)); // calculates, caches
+console.log(fastSquare(5)); // "From cache", instant
+```
+
+---
+
+## 5. Interview Questions
+
+**Easy**
+1. Closure kya hota hai?
+   - **Answer**: Closure ek function hai jo apne lexical scope ke variables ko "remember" karta hai, even after outer function return ho jaaye.
+
+**Medium**
+2. Lexical Scope kya hai?
+   - **Answer**: Lexical scope yeh determine karta hai ki function definition ke time uske around konse variables accessible hain — scope function ke **likhe jaane ki jagah** se decide hota hai, call hone ki jagah se nahi.
+
+**Hard**
+3. Closures memory leaks kaise create kar sakte hain?
+   - **Answer**: Agar closure unnecessarily large data structures (jaise bade arrays/DOM elements) ko reference karta rehta hai aur woh closure kabhi destroy nahi hota (jaise global reference me store ho jaaye), toh garbage collector usse clean nahi kar paata — memory leak ho jaata hai.
+
+**Scenario Based**
+4. Tumhe ek API rate-limiter banana hai jo track kare ki kitni baar function call hua hai aur limit cross hone par block kare. Kaunsa concept use karoge?
+   - **Answer**: Closures use karunga — ek counter variable closure me maintain karunga jo persist rahe calls ke beech, aur limit check karke function ko allow/block karunga.
+
+---
+
+## 6. Logical Questions
+
+**Problem**: Ek `debounce(fn, delay)` function likho closures use karke (yeh Section 20 me detail se aayega, yahan basic closure concept dikhayenge).
+
+**Approach**: Closure me ek `timer` variable store karo jo har call pe reset ho.
+
+```javascript
+function debounce(fn, delay) {
+  let timer; // closure variable - persists across calls
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+const log = debounce((msg) => console.log(msg), 300);
+log("Hello"); // agar 300ms ke andar phir call hua, yeh cancel ho jayega
+log("World"); // yeh chalega (assuming no more calls within 300ms)
+```
+
+**Explanation**: `timer` variable returned function ke closure me persist hota hai. Har naye call pe purana timer clear hota hai aur naya schedule hota hai — yeh closures ki state-persistence capability dikhata hai.
+
+**Time Complexity**: O(1) per call
+**Space Complexity**: O(1)
+
+---
+
+## 7. Output-Based Questions
+
+```javascript
+function createFunctions() {
+  let functions = [];
+  for (var i = 0; i < 3; i++) {
+    functions.push(function() { return i; });
+  }
+  return functions;
+}
+const fns = createFunctions();
+console.log(fns[0](), fns[1](), fns[2]()); // 3 3 3
+```
+
+**Explanation**: `var` function-scoped hai, isliye saare closures **same `i` variable** ko reference karte hain. Loop khatam hone ke baad `i` ki final value `3` hoti hai — sab functions wahi value dekhte hain.
+
+```javascript
+function createFunctionsFixed() {
+  let functions = [];
+  for (let i = 0; i < 3; i++) {
+    functions.push(function() { return i; });
+  }
+  return functions;
+}
+const fns2 = createFunctionsFixed();
+console.log(fns2[0](), fns2[1](), fns2[2]()); // 0 1 2
+```
+
+**Explanation**: `let` block-scoped hai — har iteration apna **naya `i`** banata hai, isliye har closure apni alag value capture karta hai.
+
+---
+
+## 8. Visual Diagram — Scope Chain
+
+```mermaid
+graph TD
+A[Global Scope] --> B[outer Function Scope]
+B --> C[inner Function Scope]
+C -->|Looks up chain if variable not found locally| B
+B -->|Looks up chain if variable not found locally| A
+```
+
+---
+
+## 9. Revision Section
+
+**Key Points**
+- Scope types: Global, Function, Block, Lexical.
+- Closures = Function + its lexical environment (remembered variables).
+- Closures enable: private variables, memoization, currying, debounce/throttle, module pattern.
+
+**Common Mistakes**
+- `var` use karna loops me jab har iteration ki independent value chahiye ho.
+- Closures ki wajah se accidental memory retention.
+
+**Interview Notes**
+- "createFunctions with var vs let" ek **extremely common** interview question hai — practice karna zaroori hai.
+
+**Quick Revision Table**
+
+| Concept | Meaning |
+|---------|---------|
+| Global Scope | Entire program me accessible |
+| Function Scope | Sirf function ke andar accessible (`var`) |
+| Block Scope | Sirf `{}` ke andar accessible (`let`/`const`) |
+| Lexical Scope | Definition location decide karta hai accessibility |
+| Closure | Function + remembered outer variables |
+
+---
+---
+SECTIONEOF
+wc -l /home/claude/JS-Frontend-Interview-Handbook.md
+Output
+
+# SECTION 9: `this` Keyword
+
+## 1. Introduction
+
+**`this` kya hai?**
+
+`this` ek special keyword hai jo **current execution context** ke "owner" ko refer karta hai. Iski value **kaise function call hua** us par depend karti hai, na ki kahan function define hua (except arrow functions).
+
+**Why is it needed?**
+`this` allows the same function/method ko different objects ke context me reuse karna. Real example: ek generic `logInfo()` method jo har object ke apne data ko `this` se access kare.
+
+---
+
+## 2. Internal Working
+
+```mermaid
+graph TD
+A["this value determined at CALL TIME"] --> B[Global Context]
+A --> C[Function Context - simple call]
+A --> D[Object/Method Context]
+A --> E[Arrow Function Context - lexical]
+A --> F["Explicit binding - call/apply/bind"]
+```
+
+`this` ka value **call-site** pe decide hota hai (kaise function invoke hua), function definition pe nahi (arrow functions exception hain — woh lexical scope follow karte hain).
+
+---
+
+## 3. Syntax & Rules
+
+### Global Context
+```javascript
+console.log(this); // Browser: Window object. Node module: {} (module.exports)
+
+function showThis() {
+  console.log(this); 
+}
+showThis(); // Non-strict: Window/global object. Strict mode: undefined
+```
+
+### Object/Method Context
+```javascript
+const user = {
+  name: "Aman",
+  greet() {
+    console.log(this.name); // "Aman" - this = user (the object that called the method)
+  }
+};
+user.greet();
+```
+
+### Arrow Function Context (Lexical `this`)
+```javascript
+const user2 = {
+  name: "Riya",
+  greet: () => {
+    console.log(this.name); // undefined - arrow function takes 'this' from surrounding (outer) scope, not from user2
+  }
+};
+user2.greet();
+```
+
+### Explicit Binding — call, apply, bind
+```javascript
+function introduce() {
+  console.log(`I am ${this.name}`);
+}
+
+const person1 = { name: "Karan" };
+introduce.call(person1);   // "I am Karan"
+introduce.apply(person1);  // "I am Karan" (apply takes args as array)
+
+const boundIntroduce = introduce.bind(person1);
+boundIntroduce();           // "I am Karan" (this permanently bound)
+```
+
+### Common Mistakes
+
+| Mistake | Issue |
+|---------|-------|
+| Arrow function ko object method banana jab `this` object refer karna ho | `this` object ko nahi, outer lexical scope ko refer karega |
+| Nested regular function ke andar `this` lose ho jaana | Callback ke andar `this` global/undefined ho jaata hai unless arrow function ya bind use karein |
+| `call` vs `apply` confuse karna arguments format ke liye | `call` comma-separated args leta hai, `apply` array leta hai |
+
+---
+
+## 4. Examples
+
+**Beginner**
+```javascript
+const car = {
+  brand: "Tesla",
+  showBrand() {
+    console.log(this.brand);
+  }
+};
+car.showBrand(); // "Tesla"
+```
+
+**Intermediate — `this` Losing Context Problem**
+```javascript
+const car2 = {
+  brand: "BMW",
+  showBrand() {
+    setTimeout(function() {
+      console.log(this.brand); // undefined - regular function 'this' = global/window, not car2
+    }, 100);
+  }
+};
+car2.showBrand();
+```
+
+**Advanced — Fixing with Arrow Function or bind**
+```javascript
+const car3 = {
+  brand: "Audi",
+  showBrand() {
+    setTimeout(() => {
+      console.log(this.brand); // "Audi" - arrow function inherits 'this' from showBrand's scope
+    }, 100);
+  }
+};
+car3.showBrand();
+
+// OR using bind:
+const car4 = {
+  brand: "Mercedes",
+  showBrand() {
+    setTimeout(function() {
+      console.log(this.brand);
+    }.bind(this), 100);
+  }
+};
+car4.showBrand(); // "Mercedes"
+```
+
+---
+
+## 5. Interview Questions
+
+**Easy**
+1. `this` ka value kaise decide hota hai?
+   - **Answer**: Function **kaise call hua** uske basis pe (call-site), function definition pe nahi (except arrow functions, jo lexical `this` use karte hain).
+
+**Medium**
+2. `call`, `apply`, aur `bind` me kya difference hai?
+   - **Answer**: Teeno `this` ko explicitly set karte hain. `call(thisArg, arg1, arg2...)` immediately invoke karta hai with comma-separated args. `apply(thisArg, [args])` immediately invoke karta hai with array of args. `bind(thisArg)` ek **naya function** return karta hai jisme `this` permanently bound hai, immediately call nahi karta.
+
+**Hard**
+3. Arrow function me `this` kaise resolve hota hai jab woh class method ke roop me define ho?
+   - **Answer**: Arrow function ka apna `this` nahi hota — woh apne immediate **lexical (enclosing) scope** se `this` lete hain. Class ke andar arrow function property `this` ko class instance ke roop me capture karti hai (kyunki class body ka context constructor jaisa hota hai), isliye yeh callbacks me `this` preserve karne ka common pattern hai.
+
+**Scenario Based**
+4. Tumhe ek button click handler likhna hai jisme `this` button element ko refer kare, lekin tumhe ek nested setTimeout ke andar bhi same element access karna hai. Kaise likhoge?
+   - **Answer**: Outer function regular function rakhunga (taaki `this` = button element ho event listener attach hone par), aur nested `setTimeout` ke andar **arrow function** use karunga taaki woh outer `this` (button) ko inherit kare.
+
+```javascript
+button.addEventListener("click", function() {
+  console.log(this); // button element
+  setTimeout(() => {
+    console.log(this); // still button element (arrow inherits)
+  }, 1000);
+});
+```
+
+---
+
+## 6. Logical Questions
+
+**Problem**: Ek custom `bind` polyfill likho `this` keyword ka use karke (without using built-in `.bind()`).
+
+**Approach**: `Function.prototype` pe custom method add karo jo closure se `this` aur args preserve kare.
+
+```javascript
+Function.prototype.myBind = function(context, ...presetArgs) {
+  const originalFunction = this; // the function myBind is called on
+  return function(...laterArgs) {
+    return originalFunction.apply(context, [...presetArgs, ...laterArgs]);
+  };
+};
+
+function greetPerson(greeting, name) {
+  console.log(`${greeting}, ${name}! I am ${this.identity}`);
+}
+
+const ctx = { identity: "Bot" };
+const boundGreet = greetPerson.myBind(ctx, "Hello");
+boundGreet("Aman"); // "Hello, Aman! I am Bot"
+```
+
+**Explanation**: `myBind` `this` (original function reference) ko closure me capture karta hai, fir naya function return karta hai jo `apply` use karke context aur combined arguments ke saath original function call karta hai.
+
+**Time Complexity**: O(n) where n = number of arguments
+**Space Complexity**: O(n)
+
+---
+
+## 7. Output-Based Questions
+
+```javascript
+const obj = {
+  name: "Test",
+  getName: function() {
+    return this.name;
+  }
+};
+
+const getNameRef = obj.getName;
+console.log(obj.getName()); // "Test" - called as method, this = obj
+console.log(getNameRef());   // undefined - called standalone, this = global/undefined, no 'name' property
+```
+
+```javascript
+class Counter {
+  count = 0;
+  increment = () => {
+    this.count++;
+    console.log(this.count);
+  };
+}
+const c1 = new Counter();
+const incrementRef = c1.increment;
+incrementRef(); // 1 - works correctly! arrow function class property captures 'this' lexically at creation time (bound to instance)
+```
+
+---
+
+## 8. Visual Diagram — `this` Resolution Flowchart
+
+```mermaid
+graph TD
+A["this lookup at function call"] --> B{Is it an arrow function?}
+B -->|Yes| C[Use this from enclosing lexical scope]
+B -->|No| D{Called with new?}
+D -->|Yes| E[this = newly created object]
+D -->|No| F{Called with call/apply/bind?}
+F -->|Yes| G[this = explicitly provided object]
+F -->|No| H{Called as object.method?}
+H -->|Yes| I[this = the object before the dot]
+H -->|No| J[this = undefined in strict mode, or global object in non-strict]
+```
+
+---
+
+## 9. Revision Section
+
+**Key Points**
+- `this` call-time pe decide hota hai (except arrow functions — lexical).
+- 4 Rules: Default (global/undefined), Implicit (object.method), Explicit (call/apply/bind), `new` binding (constructor).
+- Arrow functions never have their own `this`.
+
+**Common Mistakes**
+- Method reference ko standalone variable me assign karke call karna (`this` lose ho jaata hai).
+- Arrow functions ko object literal methods banana jab `this` object refer karna ho.
+
+**Interview Notes**
+- "4 Rules of this" explain karna ek strong structured answer deta hai: default binding, implicit binding, explicit binding, new binding — phir arrow function ka exception.
+
+**Quick Revision Table**
+
+| Context | `this` Value |
+|---------|--------------|
+| Global (non-strict) | Window/global object |
+| Global (strict mode) | `undefined` |
+| Object method call | The object before the dot |
+| Standalone function call | `undefined` (strict) / global (non-strict) |
+| Arrow function | Lexical scope's `this` |
+| `call`/`apply`/`bind` | Explicitly provided object |
+| Constructor (`new`) | Newly created instance |
+
+---
+---
+SECTIONEOF
+wc -l /home/claude/JS-Frontend-Interview-Handbook.md
+Output
+
+2428 /home/claude/JS-Fr
+
+
+## 1. Introduction
+
+**Array kya hai?**
+
+Array ek ordered collection hai jo multiple values ko single variable me store karta hai. JavaScript me array dynamically sized hote hain aur mixed data types hold kar sakte hain.
+
+**Why is it needed?**
+List-based data manage karne ke liye — jaise products list, user list, todo items. Real example: e-commerce cart items ek array hota hai jisme har item ek object hota hai.
+
+---
+
+## 2. Internal Working
+
+Arrays JS me **objects** hote hain internally, jisme indices keys ki tarah kaam karte hain. V8 engine arrays ko optimize karta hai special internal representations (packed arrays) ke through jab tak woh "holes" ya mixed types na rakhein.
+
+```mermaid
+graph TD
+A[Array Declaration] --> B[Stored as Object internally]
+B --> C[Indices = Keys: 0, 1, 2...]
+B --> D[length property auto-maintained]
+A --> E{Array type?}
+E -->|All same type, no holes| F[V8: Fast - Packed Array]
+E -->|Mixed types or holes| G[V8: Slower - Dictionary mode]
+```
+
+---
+
+## 3. Array Methods — Full Coverage
+
+### `push()` / `pop()` — End Operations
+```javascript
+let arr = [1, 2, 3];
+arr.push(4);        // [1,2,3,4] - adds to end, returns new length
+console.log(arr.pop()); // 4 - removes & returns last element
+console.log(arr);   // [1,2,3]
+```
+**Interview Q**: Time complexity? → **O(1)** for both (no reindexing needed).
+
+### `shift()` / `unshift()` — Start Operations
+```javascript
+let arr2 = [1, 2, 3];
+arr2.unshift(0);    // [0,1,2,3] - adds to start
+console.log(arr2.shift()); // 0 - removes & returns first element
+console.log(arr2);  // [1,2,3]
+```
+**Interview Q**: Time complexity? → **O(n)** — sabhi elements ko reindex karna padta hai.
+
+### `splice()` — Add/Remove Anywhere
+```javascript
+let arr3 = [1, 2, 3, 4, 5];
+arr3.splice(1, 2);           // removes 2 elements from index 1: [1,4,5]
+arr3.splice(1, 0, "a", "b"); // inserts at index 1 without removing: [1,"a","b",4,5]
+```
+**Mutates original array** — interview me bataना zaroori hai.
+
+### `slice()` — Extract Without Mutating
+```javascript
+let arr4 = [1, 2, 3, 4, 5];
+console.log(arr4.slice(1, 3)); // [2, 3] - extracts indices 1 to 2 (end excluded)
+console.log(arr4);              // [1,2,3,4,5] - original unchanged
+```
+
+### `concat()` — Merge Arrays
+```javascript
+let a1 = [1, 2];
+let a2 = [3, 4];
+console.log(a1.concat(a2)); // [1,2,3,4] - new array, doesn't mutate
+```
+
+### `map()` — Transform Each Element
+```javascript
+let nums = [1, 2, 3];
+let doubled = nums.map(n => n * 2);
+console.log(doubled); // [2, 4, 6]
+```
+
+### `filter()` — Keep Matching Elements
+```javascript
+let nums2 = [1, 2, 3, 4, 5];
+let evens = nums2.filter(n => n % 2 === 0);
+console.log(evens); // [2, 4]
+```
+
+### `reduce()` — Accumulate to Single Value
+```javascript
+let nums3 = [1, 2, 3, 4];
+let sum = nums3.reduce((acc, curr) => acc + curr, 0);
+console.log(sum); // 10
+```
+
+### `find()` — First Matching Element
+```javascript
+let users = [{id:1,name:"A"},{id:2,name:"B"}];
+let found = users.find(u => u.id === 2);
+console.log(found); // {id:2, name:"B"}
+```
+
+### `some()` / `every()` — Boolean Checks
+```javascript
+let nums4 = [1, 2, 3, 4];
+console.log(nums4.some(n => n > 3));  // true (at least one matches)
+console.log(nums4.every(n => n > 0)); // true (all match)
+```
+
+### `sort()` — Sorting (Mutates Original!)
+```javascript
+let nums5 = [3, 1, 4, 1, 5];
+nums5.sort((a, b) => a - b); // ascending: [1,1,3,4,5]
+nums5.sort((a, b) => b - a); // descending: [5,4,3,1,1]
+
+let words = ["banana", "apple", "cherry"];
+words.sort(); // ["apple", "banana", "cherry"] - default lexicographic
+```
+**Common Trap**: `[10, 1, 2].sort()` without comparator → `[1, 10, 2]` (string-based sort, not numeric!).
+
+### `flat()` — Flatten Nested Arrays
+```javascript
+let nested = [1, [2, 3], [4, [5, 6]]];
+console.log(nested.flat());    // [1, 2, 3, 4, [5, 6]] - depth 1 default
+console.log(nested.flat(2));   // [1, 2, 3, 4, 5, 6] - depth 2
+console.log(nested.flat(Infinity)); // fully flattened
+```
+
+---
+
+## 4. Examples
+
+**Beginner**
+```javascript
+let fruits = ["apple", "banana"];
+fruits.push("mango");
+console.log(fruits); // ["apple", "banana", "mango"]
+```
+
+**Intermediate — Chaining Methods**
+```javascript
+let products = [
+  { name: "Phone", price: 500, inStock: true },
+  { name: "Laptop", price: 1000, inStock: false },
+  { name: "Tablet", price: 300, inStock: true }
+];
+
+let availableNames = products
+  .filter(p => p.inStock)
+  .map(p => p.name);
+console.log(availableNames); // ["Phone", "Tablet"]
+```
+
+**Advanced — Custom reduce-based groupBy**
+```javascript
+function groupBy(arr, key) {
+  return arr.reduce((acc, item) => {
+    const groupKey = item[key];
+    if (!acc[groupKey]) acc[groupKey] = [];
+    acc[groupKey].push(item);
+    return acc;
+  }, {});
+}
+
+let people = [
+  { name: "A", dept: "IT" },
+  { name: "B", dept: "HR" },
+  { name: "C", dept: "IT" }
+];
+console.log(groupBy(people, "dept"));
+// { IT: [{name:"A",dept:"IT"}, {name:"C",dept:"IT"}], HR: [{name:"B",dept:"HR"}] }
+```
+
+---
+
+## 5. Interview Questions
+
+**Easy**
+1. `map()` aur `forEach()` me kya difference hai?
+   - **Answer**: `map()` ek **naya array** return karta hai transformed values ke saath. `forEach()` `undefined` return karta hai — sirf iteration/side-effects ke liye use hota hai.
+
+**Medium**
+2. `slice()` aur `splice()` me kya difference hai?
+   - **Answer**: `slice()` original array ko **mutate nahi** karta, naya array return karta hai (extraction). `splice()` original array ko **directly mutate** karta hai (add/remove elements).
+
+**Hard**
+3. `reduce()` use karke `map()` aur `filter()` dono ka kaam kaise kar sakte ho?
+   - **Answer**: `reduce` ek generic accumulator pattern hai jisse koi bhi array transformation possible hai:
+```javascript
+let nums = [1,2,3,4,5];
+// map equivalent
+let doubled = nums.reduce((acc, n) => { acc.push(n*2); return acc; }, []);
+// filter equivalent
+let evens = nums.reduce((acc, n) => { if(n%2===0) acc.push(n); return acc; }, []);
+```
+
+**Scenario Based**
+4. Tumhe 10,000 items ki list pe frequently filter+map+find operations karne hain performance-critical UI me. Kya optimize karoge?
+   - **Answer**: Chaining `.filter().map()` multiple passes karta hai array pe — bade datasets ke liye `reduce()` me combine kar sakte hain single pass me. Memoization bhi use kar sakte hain repeated computations avoid karne ke liye, aur agar list static hai toh precompute karke cache kar sakte hain.
+
+---
+
+## 6. Logical Questions
+
+**Problem**: Ek array me duplicate elements remove karo, original order preserve karte hue.
+
+**Approach**: `Set` use karo (uniqueness guarantee) ya `filter` + `indexOf` combination.
+
+```javascript
+function removeDuplicates(arr) {
+  return [...new Set(arr)];
+}
+console.log(removeDuplicates([1,2,2,3,4,4,5])); // [1,2,3,4,5]
+
+// Alternative without Set:
+function removeDuplicatesAlt(arr) {
+  return arr.filter((item, index) => arr.indexOf(item) === index);
+}
+```
+
+**Explanation**: `Set` automatically duplicate values discard karta hai insertion order preserve karte hue. Spread operator `[...set]` usse array me convert karta hai.
+
+**Time Complexity**: O(n) with Set, O(n²) with filter+indexOf approach.
+**Space Complexity**: O(n)
+
+---
+
+**Problem 2**: Array me se second largest number find karo bina sorting use kiye.
+
+**Approach**: Single pass me largest aur second largest dono track karo.
+
+```javascript
+function secondLargest(arr) {
+  let first = -Infinity, second = -Infinity;
+  for (let num of arr) {
+    if (num > first) {
+      second = first;
+      first = num;
+    } else if (num > second && num !== first) {
+      second = num;
+    }
+  }
+  return second;
+}
+console.log(secondLargest([3, 1, 4, 1, 5, 9, 2])); // 5
+```
+
+**Explanation**: Ek hi loop me dono tracking variables (`first`, `second`) maintain karte hain — sorting (O(n log n)) ki zaroorat nahi.
+
+**Time Complexity**: O(n)
+**Space Complexity**: O(1)
+
+---
+
+## 7. Output-Based Questions
+
+```javascript
+console.log([1, 2, 3].map(String)); // ["1", "2", "3"]
+
+console.log([1, [2, [3, [4]]]].flat(Infinity)); // [1, 2, 3, 4]
+
+let arr = [1, 2, 3];
+console.log(arr.length); // 3
+arr[10] = 99;
+console.log(arr.length); // 11 (sparse array - holes created)
+console.log(arr);         // [1, 2, 3, <7 empty items>, 99]
+
+console.log([1,2,3].sort((a,b) => b-a)); // [3,2,1]
+console.log(typeof [1,2,3]); // "object"
+console.log(Array.isArray([1,2,3])); // true
+```
+
+**Explanation**: `arr[10] = 99` directly assign karne se array ka length auto-update ho jaata hai (`11`), beech ke unassigned indices "holes" ban jaate hain (empty slots, `undefined` nahi exactly — they're skipped by methods like `map`/`forEach`).
+
+---
+
+## 8. Visual Diagram — Array Methods Categorization
+
+```mermaid
+graph TD
+A[Array Methods] --> B[Mutating Original]
+A --> C[Non-Mutating - Returns New]
+B --> D[push, pop, shift, unshift, splice, sort, reverse]
+C --> E[map, filter, slice, concat, flat]
+A --> F[Iteration/Search]
+F --> G[find, some, every, forEach, reduce]
+```
+
+---
+
+## 9. Revision Section
+
+**Key Points**
+- Mutating methods: `push`, `pop`, `shift`, `unshift`, `splice`, `sort`, `reverse`.
+- Non-mutating methods: `map`, `filter`, `slice`, `concat`, `flat`.
+- `reduce()` is the most powerful/generic — can implement map, filter, even forEach logic.
+- `sort()` default behavior is lexicographic (string-based) — always pass comparator for numbers.
+
+**Common Mistakes**
+- `slice` aur `splice` confuse karna.
+- `sort()` ko bina comparator use karna numbers ke liye.
+- Forgetting `sort()`, `reverse()`, `splice()` mutate the original array.
+
+**Interview Notes**
+- Array method ke time aur space complexity poochna common hai — `shift`/`unshift` = O(n), `push`/`pop` = O(1) yaad rakhna zaroori.
+
+**Quick Revision Table**
+
+| Method | Mutates? | Returns | Time Complexity |
+|--------|----------|---------|------------------|
+| `push` | Yes | New length | O(1) |
+| `pop` | Yes | Removed element | O(1) |
+| `shift` | Yes | Removed element | O(n) |
+| `unshift` | Yes | New length | O(n) |
+| `splice` | Yes | Removed elements array | O(n) |
+| `slice` | No | New array | O(n) |
+| `map` | No | New array | O(n) |
+| `filter` | No | New array | O(n) |
+| `reduce` | No | Accumulated value | O(n) |
+| `sort` | Yes | Same array (sorted) | O(n log n) |
+| `flat` | No | New flattened array | O(n) |
+
+---
+---
+SECTIONEOF
+wc -l /home/claude/JS-Frontend-Interview-Handbook.md
+
+cat >> /home/claude/JS-Frontend-Interview-Handbook.md << 'SECTIONEOF'
+# SECTION 11: Objects
+
+## 1. Introduction
+
+**Object kya hai?**
+
+Object ek collection hai key-value pairs ka, jisme related data aur functionality (methods) ko ek single entity me group kiya jaata hai.
+
+**Why is it needed?**
+Real-world entities (user, product, order) ko represent karne ke liye structured way chahiye — object woh deta hai. Example: `{name: "Aman", age: 25, email: "a@x.com"}`.
+
+---
+
+## 2. Internal Working
+
+Objects Heap memory me store hote hain, Stack me sirf reference hota hai. Internally V8 objects ko **hidden classes** ke through optimize karta hai property access fast karne ke liye.
+
+```mermaid
+graph TD
+A[Object Created] --> B[Stored in Heap Memory]
+B --> C[Reference stored in Stack]
+A --> D[Properties stored as key-value pairs]
+D --> E[V8 creates Hidden Class for fast property access]
+```
+
+---
+
+## 3. Syntax
+
+### Object Creation
+```javascript
+// Object literal (most common)
+const user = { name: "Aman", age: 25 };
+
+// Constructor function
+function User(name, age) {
+  this.name = name;
+  this.age = age;
+}
+const user2 = new User("Riya", 22);
+
+// Object.create
+const user3 = Object.create({ greet() { return "Hi"; } });
+
+// Class syntax (ES6)
+class UserClass {
+  constructor(name) {
+    this.name = name;
+  }
+}
+const user4 = new UserClass("Karan");
+```
+
+### Object Methods
+```javascript
+const person = { name: "Aman", age: 25, city: "Delhi" };
+
+console.log(Object.keys(person));    // ["name", "age", "city"]
+console.log(Object.values(person));  // ["Aman", 25, "Delhi"]
+console.log(Object.entries(person)); // [["name","Aman"],["age",25],["city","Delhi"]]
+console.log(Object.assign({}, person, { age: 26 })); // merges, age overridden
+```
+
+### Destructuring
+```javascript
+const { name, age } = person;
+console.log(name, age); // "Aman" 25
+
+// With renaming and defaults
+const { name: fullName, country = "India" } = person;
+console.log(fullName, country); // "Aman" "India"
+
+// Nested destructuring
+const data = { user: { profile: { city: "Mumbai" } } };
+const { user: { profile: { city } } } = data;
+console.log(city); // "Mumbai"
+```
+
+### Spread Operator
+```javascript
+const obj1 = { a: 1, b: 2 };
+const obj2 = { ...obj1, c: 3 };
+console.log(obj2); // { a: 1, b: 2, c: 3 }
+
+// Useful for shallow cloning
+const clone = { ...person };
+```
+
+### Object.freeze & Object.seal
+```javascript
+const frozenObj = Object.freeze({ x: 1 });
+frozenObj.x = 100; // silently fails (or throws in strict mode)
+console.log(frozenObj.x); // 1 - unchanged
+
+const sealedObj = Object.seal({ y: 1 });
+sealedObj.y = 100;   // ✅ allowed - can modify existing properties
+sealedObj.z = 200;   // ❌ not allowed - cannot add new properties
+console.log(sealedObj); // { y: 100 }
+```
+
+### Common Mistakes
+
+| Mistake | Issue |
+|---------|-------|
+| `Object.freeze` ko deep freeze samajhna | Yeh sirf **shallow** freeze karta hai — nested objects still mutable rehte hain |
+| Spread operator ko deep copy samajhna | Spread sirf **shallow copy** karta hai |
+| Destructuring me default value ko `null` ke saath expect karna | Default value sirf `undefined` ke case me trigger hota hai, `null` me nahi |
+
+---
+
+## 4. Examples
+
+**Beginner**
+```javascript
+const car = { brand: "Toyota", model: "Corolla" };
+console.log(car.brand); // "Toyota"
+console.log(car["model"]); // "Corolla"
+```
+
+**Intermediate — Deep Freeze Implementation**
+```javascript
+function deepFreeze(obj) {
+  Object.keys(obj).forEach(key => {
+    if (typeof obj[key] === "object" && obj[key] !== null) {
+      deepFreeze(obj[key]);
+    }
+  });
+  return Object.freeze(obj);
+}
+
+const nestedObj = deepFreeze({ a: 1, b: { c: 2 } });
+nestedObj.b.c = 999; // fails silently
+console.log(nestedObj.b.c); // 2 - truly frozen now
+```
+
+**Advanced — Deep Copy from Scratch**
+```javascript
+function deepClone(obj) {
+  if (obj === null || typeof obj !== "object") return obj;
+  if (Array.isArray(obj)) return obj.map(deepClone);
+  
+  const clonedObj = {};
+  for (let key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      clonedObj[key] = deepClone(obj[key]);
+    }
+  }
+  return clonedObj;
+}
+
+const original = { a: 1, b: { c: 2, d: [3, 4] } };
+const copy = deepClone(original);
+copy.b.c = 999;
+console.log(original.b.c); // 2 - unaffected, true deep copy
+```
+
+> **Modern alternative**: `structuredClone(obj)` — built-in deep clone (ES2022+), handles most cases including circular references.
+
+---
+
+## 5. Interview Questions
+
+**Easy**
+1. Shallow Copy aur Deep Copy me kya difference hai?
+   - **Answer**: Shallow copy top-level properties ko copy karta hai, but nested objects same reference share karte hain (changes reflect both). Deep copy completely independent copy banata hai, nested objects bhi — koi shared reference nahi.
+
+**Medium**
+2. `Object.freeze()` aur `Object.seal()` me kya difference hai?
+   - **Answer**: `freeze()` properties ko modify aur add/remove dono se rokta hai (fully immutable, shallow). `seal()` existing properties modify karne deta hai, but naye properties add/remove nahi hone deta.
+
+**Hard**
+3. `Object.assign({}, obj1, obj2)` aur `{...obj1, ...obj2}` me koi difference hai?
+   - **Answer**: Functionally largely similar (shallow merge), lekin `Object.assign` getters/setters ko execute karta hai target object pe directly, jabki spread mostly similar behave karta hai modern engines me. Performance-wise spread thoda fast ho sakta hai modern engines me, but practically interchangeable hain most cases ke liye.
+
+**Scenario Based**
+4. Tumhe ek configuration object banana hai jo runtime me accidentally modify na ho sake (constants jaisa behave kare), including nested settings. Kya approach loge?
+   - **Answer**: `deepFreeze()` use karunga (recursive `Object.freeze`) taaki top-level aur nested properties dono immutable ho jaayein, accidental mutations completely prevent ho.
+
+---
+
+## 6. Logical Questions
+
+**Problem**: Do objects ko deeply compare karo (deep equality check) bina `JSON.stringify` use kiye (jo key order pe depend karta hai aur functions ko ignore karta hai).
+
+**Approach**: Recursively har key-value pair compare karo.
+
+```javascript
+function deepEqual(obj1, obj2) {
+  if (obj1 === obj2) return true;
+  if (typeof obj1 !== "object" || typeof obj2 !== "object" || obj1 === null || obj2 === null) {
+    return false;
+  }
+  const keys1 = Object.keys(obj1);
+  const keys2 = Object.keys(obj2);
+  if (keys1.length !== keys2.length) return false;
+  
+  return keys1.every(key => deepEqual(obj1[key], obj2[key]));
+}
+
+console.log(deepEqual({a:1,b:{c:2}}, {a:1,b:{c:2}})); // true
+console.log(deepEqual({a:1,b:{c:2}}, {a:1,b:{c:3}})); // false
+```
+
+**Explanation**: Recursion se nested objects ko bhi compare karte hain. `keys1.every` ensure karta hai har property recursively match kare.
+
+**Time Complexity**: O(n) where n = total number of properties (including nested).
+**Space Complexity**: O(d) where d = depth of nesting (recursion stack).
+
+---
+
+## 7. Output-Based Questions
+
+```javascript
+const obj = { a: 1, b: 2 };
+const obj2 = obj;
+obj2.a = 100;
+console.log(obj.a); // 100 - same reference
+
+const obj3 = { ...obj };
+obj3.a = 999;
+console.log(obj.a); // 100 - unaffected, spread created new top-level object
+
+const nested = { x: { y: 1 } };
+const shallowCopy = { ...nested };
+shallowCopy.x.y = 999;
+console.log(nested.x.y); // 999 - affected! nested object reference still shared (shallow copy limitation)
+```
+
+```javascript
+console.log(Object.keys({})); // []
+console.log(Object.keys([1,2,3])); // ["0","1","2"] - array indices as string keys
+console.log({} === {}); // false - different references
+```
+
+---
+
+## 8. Visual Diagram — Shallow vs Deep Copy
+
+```mermaid
+graph TD
+A[Original Object] --> B[Shallow Copy]
+A --> C[Deep Copy]
+B --> D[Top-level properties: independent]
+B --> E[Nested objects: SAME reference shared]
+C --> F[Top-level properties: independent]
+C --> G[Nested objects: ALSO independent - fully cloned]
+```
+
+---
+
+## 9. Revision Section
+
+**Key Points**
+- Object creation: literal, constructor function, `Object.create`, class syntax.
+- Destructuring + spread are core ES6 features for working with objects cleanly.
+- `Object.freeze`/`Object.seal` only work shallowly by default.
+- Deep copy needed when nested mutation must be avoided — use `structuredClone()` or recursive clone function.
+
+**Common Mistakes**
+- Spread/`Object.assign` ko deep copy samajhna.
+- `Object.freeze` ko nested objects pe bhi automatically apply hota samajhna.
+
+**Interview Notes**
+- "Implement deepClone from scratch" ek **very common** coding round question hai — practice zaroor karo.
+
+**Quick Revision Table**
+
+| Operation | Shallow or Deep | Method |
+|-----------|------------------|--------|
+| `{...obj}` | Shallow | Spread |
+| `Object.assign({}, obj)` | Shallow | Assign |
+| `JSON.parse(JSON.stringify(obj))` | Deep (but loses functions, undefined, etc.) | Stringify trick |
+| `structuredClone(obj)` | Deep (modern, recommended) | Built-in |
+| Custom recursive function | Deep (fully controllable) | Manual |
+
+---
+---
+SECTIONEOF
+wc -l /home/claude/JS-Frontend-Interview-Handbook.md
+
+
+
+
