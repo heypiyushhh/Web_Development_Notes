@@ -123,10 +123,10 @@
 // console.log(x); // Output: 5
 
 
-;
+// ;
 
 
-let x = 10 // number
+// let x = 10 // number
 // console.log(x == 10); // Output: true 
 // console.log(x === 10); // Output: false
 // console.log(x === "10"); // Output: true
@@ -164,7 +164,105 @@ let x = 10 // number
 // console.log(canVote);
 
 
-name  = "Piyush Kumar";
+// name  = "Piyush Kumar";
 
-  
+
+
+// let age  =  21 ;
+
+// let snum =  "1233";
+
+
+//  console.log(typeof age)
+//   console.log(  typeof Number(snum))
+
+
+
+//  console.log(  Boolean (age));
+
+
+//    num = 0
+
+// console.log(Boolean(0));    
+
+
+
+// console.log(Boolean(1))
+// console.log(Boolean(2))
+// console.log(Boolean(4))
+
+
+// console.log(Boolean(-1))
+
+let s = ""
+
+let s2  =  "hello"
+
+// console.log(Boolean(s));
+
+// console.log(Boolean (s2));
+
+// console.log(Boolean(null));    // false
+// console.log(Boolean(undefined)); // false
+// console.log(Boolean(NaN));    // false 
+
+
  
+
+
+// console.log(Boolean ({}))
+// console.log(Boolean ([]))
+
+// console.log(true + 1) //  2 
+// //    true as  1 true =1 
+
+// console.log("3" + 4) // 7
+
+
+//  let name  =  "piyush";
+
+//    const myfun =  function(name) {
+
+//     return `hello ${name}`
+    
+// }
+
+// console.log(myfun(name));
+
+
+// console.log( 0.1 + 0.2 == 0.3); 
+
+
+// setTimeout(function() {
+//   console.log("Executed after delay");
+// }, 1000); 
+
+// setTimeout( function(){
+//     console.log( "hello");
+    
+// },5000
+
+// 
+//   function   myfun(){
+
+//   }
+ 
+// const  myfun  = ( a, b)=> {
+
+//     return a+b;
+
+// }
+
+// console.log(myfun(12,8));
+
+function multiplier(factor) {
+  return function(num) {
+    return num * factor;
+  };
+}
+ function mul( f){
+   
+return  function(){
+    
+}
+ }
